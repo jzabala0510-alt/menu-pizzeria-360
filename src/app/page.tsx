@@ -65,7 +65,7 @@ export default function Home() {
   };
 
   const handleWhatsApp = (note: string, deliveryType: string, coords?: string) => {
-    const phone = "584120930501"; 
+    const phone = "584221733933"; 
     const items = cart.map(i => {
       const sizeTag = i.sizeSelected ? `[${i.sizeSelected.toUpperCase()}]` : '';
       return `• ${i.quantity}x ${i.nombre} ${sizeTag} - $${(i.precioFinal * i.quantity).toFixed(2)}`;

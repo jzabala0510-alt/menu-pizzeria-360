@@ -167,6 +167,20 @@ export const MENU: MenuSection[] = [
         precio: 8.00, 
         desc: "Receta clásica de la casa con el mejor sabor artesanal.",
         categoriaId: "pastichos" 
+      },
+      { 
+        id: 20, 
+        nombre: "Pasticho de Berenjena", 
+        precio: 8.00, 
+        desc: "Receta clásica de la casa con el mejor sabor artesanal.",
+        categoriaId: "pastichos" 
+      },
+      { 
+        id: 21, 
+        nombre: "Pastel de Chucho", 
+        precio: 8.00, 
+        desc: "Receta clásica de la casa con el mejor sabor artesanal.",
+        categoriaId: "pastichos" 
       }
     ]
   }
