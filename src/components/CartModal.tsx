@@ -9,98 +9,69 @@ interface Props {
   cart: CartItem[];
   onUpdateQuantity: (id: number, delta: number, size?: string) => void; 
   onCheckout: (note: string, deliveryType: string, coords?: string) => void;
+  manualAddress: string;
+  setManualAddress: (val: string) => void;
 }
 
-export default function CartModal({ isOpen, onClose, cart, onUpdateQuantity, onCheckout }: Props) {
+export default function CartModal({ 
+  isOpen, onClose, cart, onUpdateQuantity, onCheckout, manualAddress, setManualAddress 
+}: Props) {
   
   useEffect(() => {
-  if (typeof document !== 'undefined') {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-  }
-
-  return () => {
     if (typeof document !== 'undefined') {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = isOpen ? 'hidden' : 'unset';
     }
-  };
-}, [isOpen]);
+    return () => {
+      if (typeof document !== 'undefined') document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
 
   const [note, setNote] = useState("");
   const [deliveryType, setDeliveryType] = useState("pickup");
   const [coords, setCoords] = useState<string | undefined>(undefined);
   const [loadingGps, setLoadingGps] = useState(false);
 
-  // 2. EL RETORNO NULO VA DESPUÉS DE LOS HOOKS
   if (!isOpen) return null;
 
   const total = cart.reduce((acc, item) => acc + (item.precioFinal * item.quantity), 0);
 
   const handleGetLocation = () => {
     setLoadingGps(true);
-    
-    if (!navigator.geolocation) {
-        alert("Tu navegador no soporta geolocalización.");
-        setLoadingGps(false);
-        return;
-    }
-
-    const options = {
-        enableHighAccuracy: true,
-        timeout: 8000, // Bajamos a 8 segundos para que no se quede pegado
-        maximumAge: 0
-    };
-
+    const options = { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 };
     navigator.geolocation.getCurrentPosition(
-        (position) => {
+      (position) => {
         const { latitude, longitude } = position.coords;
-        // Formato estandarizado para Google Maps
-        const link = `https://www.google.com/maps?q=${latitude},${longitude}`;
-        setCoords(link);
+        setCoords(`https://www.google.com/maps?q=${latitude},${longitude}`);
         setLoadingGps(false);
-        }, 
-        (error) => {
+      }, 
+      () => {
         setLoadingGps(false);
-        let mensaje = "No se pudo obtener la ubicación.";
-        
-        switch(error.code) {
-            case error.PERMISSION_DENIED:
-            mensaje = "Por favor, permite el acceso al GPS en la configuración de tu navegador.";
-            break;
-            case error.POSITION_UNAVAILABLE:
-            mensaje = "La información de ubicación no está disponible (revisa tu señal).";
-            break;
-            case error.TIMEOUT:
-            mensaje = "Se agotó el tiempo de espera. Intenta de nuevo.";
-            break;
-        }
-        
-        console.error("Error detallado de GPS:", error.message);
-        alert(mensaje);
-        },
-        options
+        alert("No se pudo obtener el GPS. Escribe tu dirección manualmente.");
+      },
+      options
     );
-    };
+  };
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[100] p-0 sm:p-4">
-      <div className="bg-white w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-300">
-        <div className="p-6 pt-8">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-black text-slate-800 tracking-tighter">Tu Pedido</h2>
-            <button 
-                onClick={onClose} 
-                className="w-10 h-10 flex items-center justify-center bg-slate-100 text-slate-500 rounded-full hover:bg-red-50 hover:text-red-600 transition-colors text-2xl"
-            >
-                ×
-            </button>
-          </div>
+      {/* CAMBIO CLAVE: max-h-[90vh] y flex flex-col 
+          Esto evita que el modal se rompa en pantallas pequeñas.
+      */}
+      <div className="bg-white w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-300 max-h-[90vh] flex flex-col">
+        
+        {/* Cabecera Fija */}
+        <div className="p-6 pb-2 flex justify-between items-center bg-white z-10">
+          <h2 className="text-2xl font-black text-slate-800 tracking-tighter">Tu Pedido</h2>
+          <button onClick={onClose} className="w-10 h-10 flex items-center justify-center bg-slate-100 text-slate-500 rounded-full hover:bg-red-50 hover:text-red-600 transition-colors text-2xl">×</button>
+        </div>
 
-          {/* LISTA DE PRODUCTOS */}
-          <div className="space-y-3 max-h-[35vh] overflow-y-auto pr-2 mb-6 scrollbar-hide">
+        {/* ZONA DE SCROLL: 
+            Aquí es donde viven los productos y el formulario de dirección.
+        */}
+        <div className="flex-1 overflow-y-auto px-6 py-2 scrollbar-hide">
+          
+          {/* Lista de Productos */}
+          <div className="space-y-3 mb-6">
             {cart.length === 0 ? (
               <p className="text-center py-10 text-slate-400 font-medium italic">Tu carrito está vacío...</p>
             ) : (
@@ -110,92 +81,80 @@ export default function CartModal({ isOpen, onClose, cart, onUpdateQuantity, onC
                     <h4 className="font-bold text-slate-800 text-sm leading-tight">
                       {item.nombre} 
                       {item.sizeSelected && (
-                        <span className="ml-2 text-red-600 text-[10px] font-black uppercase bg-red-50 px-2 py-0.5 rounded-md">
-                          {item.sizeSelected}
-                        </span>
+                        <span className="ml-2 text-red-600 text-[10px] font-black uppercase bg-red-50 px-2 py-0.5 rounded-md">{item.sizeSelected}</span>
                       )}
                     </h4>
-                    <p className="text-red-600 font-black text-sm mt-1">
-                      ${(item.precioFinal * item.quantity).toFixed(2)}
-                    </p>
+                    <p className="text-red-600 font-black text-sm mt-1">${(item.precioFinal * item.quantity).toFixed(2)}</p>
                   </div>
-                  
                   <div className="flex items-center gap-3 bg-white rounded-xl border border-slate-200 p-1 ml-4 shadow-sm">
-                    <button 
-                      onClick={() => onUpdateQuantity(item.id, -1, item.sizeSelected)} 
-                      className="w-8 h-8 flex items-center justify-center font-bold text-slate-400 hover:text-red-600 transition-colors"
-                    >-</button>
+                    <button onClick={() => onUpdateQuantity(item.id, -1, item.sizeSelected)} className="w-8 h-8 flex items-center justify-center font-bold text-slate-400 hover:text-red-600">-</button>
                     <span className="font-black text-sm w-4 text-center text-slate-700">{item.quantity}</span>
-                    <button 
-                      onClick={() => onUpdateQuantity(item.id, 1, item.sizeSelected)} 
-                      className="w-8 h-8 flex items-center justify-center font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    >+</button>
+                    <button onClick={() => onUpdateQuantity(item.id, 1, item.sizeSelected)} className="w-8 h-8 flex items-center justify-center font-bold text-red-600 hover:bg-red-50 rounded-lg">+</button>
                   </div>
                 </div>
               ))
             )}
           </div>
 
-          {/* TOTAL */}
-          <div className="flex justify-between items-center p-5 bg-red-600 rounded-[1.5rem] mb-6 shadow-xl shadow-red-100">
+          {/* Total informativo */}
+          <div className="flex justify-between items-center p-5 bg-red-600 rounded-[1.5rem] mb-6 shadow-lg shadow-red-100">
             <span className="text-red-100 font-bold uppercase tracking-widest text-[10px]">Total a pagar</span>
             <span className="text-2xl font-black text-white">${total.toFixed(2)}</span>
           </div>
 
-          {/* METODO DE ENTREGA */}
-          <div className="space-y-4">
+          {/* Opciones de Entrega */}
+          <div className="space-y-4 pb-6">
             <div className="flex gap-2 bg-slate-100 p-1.5 rounded-2xl">
-                <button 
-                onClick={() => setDeliveryType("pickup")} 
-                className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all duration-200 ${deliveryType === 'pickup' ? 'bg-white text-red-600 shadow-sm' : 'text-slate-500'}`}
-                >
-                🏪 Pickup
-                </button>
-                <button 
-                onClick={() => setDeliveryType("delivery")} 
-                className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all duration-200 ${deliveryType === 'delivery' ? 'bg-white text-red-600 shadow-sm' : 'text-slate-500'}`}
-                >
-                🛵 Delivery
-                </button>
+                <button onClick={() => setDeliveryType("pickup")} className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all duration-200 ${deliveryType === 'pickup' ? 'bg-white text-red-600 shadow-sm' : 'text-slate-500'}`}>🏪 Pickup</button>
+                <button onClick={() => setDeliveryType("delivery")} className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all duration-200 ${deliveryType === 'delivery' ? 'bg-white text-red-600 shadow-sm' : 'text-slate-500'}`}>🛵 Delivery</button>
             </div>
 
-            {deliveryType === 'pickup' ? (
-                <div className="bg-red-50/50 p-4 rounded-2xl border border-red-100 flex items-start gap-3">
-                <span className="text-xl">📍</span>
-                <div>
-                    <p className="text-[10px] font-black text-red-800 uppercase tracking-tight">Recoger en:</p>
-                    <p className="text-xs text-red-900 font-bold">A Confirmar vía WhatsApp.</p>
-                </div>
-                </div>
-            ) : (
-                /* Agrupamos el botón y la nota informativa */
+            {deliveryType === 'delivery' && (
                 <div className="space-y-3">
-                <button 
-                    onClick={handleGetLocation}
-                    disabled={loadingGps}
-                    className={`w-full py-4 rounded-2xl text-[11px] font-black transition-all border-2 ${coords ? 'bg-green-50 border-green-200 text-green-700' : 'bg-white border-red-600 text-red-600 shadow-sm active:scale-[0.98]'}`}
-                >
-                    {loadingGps ? "⌛ OBTENIENDO GPS..." : coords ? "✅ GPS CAPTURADO" : "📍 COMPARTIR MI UBICACIÓN GPS"}
-                </button>
-                
-                <p className="text-center text-[10px] text-red-600 font-bold leading-tight px-4">
-                    * El precio del delivery será confirmado vía WhatsApp al recibir su pedido.
-                </p>
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Dirección Exacta *</label>
+                        <textarea 
+                            value={manualAddress}
+                            onChange={(e) => setManualAddress(e.target.value)}
+                            placeholder="Ej: Urb. Marin, Calle 6, Casa 15..."
+                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 text-sm text-slate-800 focus:border-red-500 outline-none transition-all resize-none"
+                            rows={2}
+                        />
+                    </div>
+                    <button onClick={handleGetLocation} disabled={loadingGps} className={`w-full py-3 rounded-2xl text-[10px] font-black border-2 transition-all ${coords ? 'bg-green-50 border-green-200 text-green-700' : 'bg-white border-slate-200 text-slate-500'}`}>
+                        {loadingGps ? "⌛ OBTENIENDO..." : coords ? "✅ GPS ADJUNTO" : "📍 PUNTO GPS (OPCIONAL)"}
+                    </button>
+
+                    <div className="bg-red-50 p-3 rounded-xl border border-red-100 mt-2">
+                        <p className="text-[10px] text-red-700 font-bold leading-tight text-center uppercase tracking-tight">
+                            ⚠️ El costo del delivery será confirmado por WhatsApp al recibir su dirección.
+                        </p>
+                    </div>
                 </div>
             )}
 
             <textarea 
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="¿Alguna instrucción adicional?"
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm text-slate-800 focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none transition-all resize-none"
-                rows={2}
+                placeholder="¿Notas adicionales? (Ej: Sin cebolla...)"
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm text-slate-800 focus:border-red-500 outline-none resize-none"
+                rows={1}
             />
-         </div>
+          </div>
+        </div>
 
+        {/* PIE DE PÁGINA FIJO: 
+            El botón de WhatsApp NUNCA desaparece. 
+        */}
+        <div className="p-6 bg-white border-t border-slate-50 shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
           <button 
             onClick={() => onCheckout(note, deliveryType, coords)}
-            className="w-full bg-green-500 hover:bg-green-600 text-white font-black py-5 rounded-[1.5rem] shadow-xl shadow-green-100 transition-all active:scale-[0.98] mt-6 flex items-center justify-center gap-3 uppercase tracking-widest text-sm"
+            disabled={deliveryType === 'delivery' && !manualAddress}
+            className={`w-full font-black py-5 rounded-[1.5rem] transition-all active:scale-[0.98] flex items-center justify-center gap-3 uppercase tracking-widest text-sm ${
+                deliveryType === 'delivery' && !manualAddress 
+                ? 'bg-slate-200 text-slate-400 cursor-not-allowed' 
+                : 'bg-green-500 hover:bg-green-600 text-white shadow-xl shadow-green-100'
+            }`}
           >
             Confirmar por WhatsApp
           </button>
